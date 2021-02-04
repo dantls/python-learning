@@ -1,12 +1,9 @@
 import altair as alt
 import streamlit as st
 import pandas as pd
+import time
 
-from vega_datasets import data
-
-source = data.barley()
-
-dados = [
+data = [
 ['25.12.20', 'Novak', 12000, 1] ,
 ['25.12.20', 'Andy', 11000, 3] ,
 ['25.12.20', 'Roger', 10500, 4] ,
@@ -21,28 +18,47 @@ dados = [
 ['25.12.25', 'Nadal', 14500, 2] ,
 ]
 
-df_dados = pd.DataFrame(data=dados, columns=['week_title','full_name','ranking_points','rank_number'])
+df_dados = pd.DataFrame(data=data, columns=['week_title','full_name','ranking_points','rank_number'])
 
-st.dataframe(df_dados)
+week_list = df_dados['week_title'].unique()
+
+
 bars = alt.Chart(df_dados).mark_bar().encode(
-  x=alt.X('ranking_points:Q'),
-  y=alt.Y('full_name:N',sort='-x')
-).properties(
-       width=650, 
-       height=400
+  x=alt.X('1:Q',axis=alt.Axis(title='ATP Ranking Points')),
+  y=alt.Y('0:N',axis=alt.Axis(title='The Big Four'))
+  ).properties(
+      width=750,
+      height=400
   )
 
 bar_plot = st.altair_chart(bars)
 
+def plot_bar_animated_altair(df, week):
+  bars = alt.Chart(df, title="Ranking as of week: "+week).mark_bar().encode(
+    x=alt.X('ranking_points:Q', axis=alt.Axis(title='ATP Ranking Points')),
+    y=alt.Y('full_name:N',axis=alt.Axis(title='The Big Four'),sort='-x'),
+    color=alt.Color('full_name:N', title='Players',  legend=alt.Legend(orient="left")), 
+    ).properties(
+        width=750, 
+        height=400
+    )
+  text = bars.mark_text(
+    align='left',
+    baseline='middle',
+    dx=0, # Nudges text to right so it doesn't appear on top of the bar
+    fontSize=20,
+    color='black'
+  ).encode(
+        text='ranking_points:Q'
+  )
 
 
+  return bars + text
 
 
-st.dataframe(source)
-bars = alt.Chart(source).mark_bar().encode(
-    x='sum(yield):Q',
-    y=alt.Y('site:N', sort='-x')
-)
-
-st.altair_chart(bars)
-
+if st.button('Plot'):
+  for week in week_list:
+    weekly_df = df_dados[df_dados['week_title']==week]       
+    bars = plot_bar_animated_altair(weekly_df, week)
+    time.sleep(0.8) 
+    bar_plot.altair_chart(bars)
